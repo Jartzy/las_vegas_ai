@@ -1,0 +1,10 @@
+# Ignore Python virtual env and cache
+venv/
+__pycache__/
+
+# Ignore Docker volumes and logs
+pgdata/
+*.log
+
+# Ignore environment files (store secrets locally)
+.env

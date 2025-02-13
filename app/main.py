@@ -1,30 +1,15 @@
-from flask import Flask, render_template, session, redirect, url_for
-from database import get_db_connection
-from auth import auth_bp
+from flask import Flask, render_template, request
 
-app = Flask(__name__)
-app.secret_key = "your_secret_key"  # Change this for security
-app.register_blueprint(auth_bp)
+app = Flask(__name__, template_folder="templates")  # Explicitly set template directory
 
-def is_logged_in():
-    """Checks if a user is logged in."""
-    return "user" in session
+@app.route("/", methods=["GET", "POST"])
+def home():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        return f"Received: {username} / {password}"  # Temporary response to test login
 
-@app.route("/")
-def dashboard():
-    if not is_logged_in():
-        return redirect(url_for("auth.login"))
-
-    conn = get_db_connection()
-    cur = conn.cursor()
-    
-    cur.execute("SELECT timestamp, level, source, message FROM logs ORDER BY timestamp DESC LIMIT 50;")
-    logs = cur.fetchall()
-
-    cur.close()
-    conn.close()
-
-    return render_template("dashboard.html", logs=logs)
+    return render_template("login.html")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(debug=True, host="0.0.0.0", port=5000)  # Bind to all interfaces
