@@ -1,0 +1,12 @@
+<h1>Your Itinerary</h1>
+<ul id="itineraryList"></ul>
+
+<script>
+    function addToItinerary(event, time, location) {
+        fetch("/book", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ event, time, location })
+        }).then(() => alert("Added to itinerary!"));
+    }
+</script>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Two-Factor Authentication</title>
+</head>
+<body>
+    <h2>Enter 2FA Code</h2>
+    <p>Scan this QR code in Google Authenticator if you haven't already:</p>
+    <img src="{{ url_for('static', filename='qrcodes/' + username + '.png') }}" alt="QR Code">
+    
+    <form method="POST">
+        <label>Authentication Code:</label>
+        <input type="text" name="otp" required>
+        <button type="submit">Verify</button>
+    </form>
+</body>
+</html>

@@ -1,0 +1,14 @@
+<button onclick="getNearby()">Find Nearby</button>
+<ul id="nearbyList"></ul>
+
+<script>
+    function getNearby() {
+        fetch("/recommendations/nearby")
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("nearbyList").innerHTML = data.map(place => 
+                `<li>${place.name} - ${place.distance.toFixed(1)} miles</li>`
+            ).join("");
+        });
+    }
+</script>

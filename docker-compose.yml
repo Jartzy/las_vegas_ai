@@ -1,0 +1,37 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:latest
+    container_name: las_vegas_db
+    restart: always
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: las_vegas_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  flask_app:
+    build: .
+    container_name: las_vegas_flask
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: "postgresql://myuser:mypassword@db/las_vegas_db"
+
+  cron_jobs:
+    build: .
+    container_name: cron_jobs
+    restart: always
+    depends_on:
+      - db
+    command: ["python", "scheduled_tasks.py"]
+
+volumes:
+  pgdata:

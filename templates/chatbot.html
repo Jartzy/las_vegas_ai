@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Chat - Voice Enabled</title>
+</head>
+<body>
+    <h1>Las Vegas AI Chat Assistant</h1>
+    <div id="chatbox"></div>
+    
+    <input type="text" id="messageInput" placeholder="Ask something...">
+    <button onclick="sendMessage()">Send</button>
+    <button onclick="startListening()">🎙️ Speak</button>
+    
+    <script>
+        function sendMessage() {
+            const message = document.getElementById("messageInput").value;
+            fetch("/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("chatbox").innerHTML += 
+                    `<p>User: ${message}</p><p>AI: ${data.response}</p>`;
+                speakResponse(data.response);
+            });
+        }
+
+        function startListening() {
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            
+            recognition.onresult = (event) => {
+                const speechText = event.results[0][0].transcript;
+                document.getElementById("messageInput").value = speechText;
+                sendMessage();
+            };
+            
+            recognition.start();
+        }
+
+        function speakResponse(text) {
+            const speech = new SpeechSynthesisUtterance();
+            speech.text = text;
+            speech.lang = 'en-US';
+            window.speechSynthesis.speak(speech);
+        }
+    </script>
+</body>
+</html>
