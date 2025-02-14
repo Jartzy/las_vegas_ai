@@ -1,14 +1,46 @@
-<button onclick="getNearby()">Find Nearby</button>
-<ul id="nearbyList"></ul>
-
-<script>
-    function getNearby() {
-        fetch("/recommendations/nearby")
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById("nearbyList").innerHTML = data.map(place => 
-                `<li>${place.name} - ${place.distance.toFixed(1)} miles</li>`
-            ).join("");
-        });
-    }
-</script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Event Recommendations</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+    th { background-color: #f4f4f4; }
+  </style>
+</head>
+<body>
+  <h1>Entertainment Data</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Category</th>
+        <th>Description</th>
+        <th>Event Date</th>
+        <th>Venue</th>
+        <th>Created At</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rec in recommendations %}
+      <tr>
+        <td>{{ rec.id }}</td>
+        <td>{{ rec.name }}</td>
+        <td>{{ rec.category }}</td>
+        <td>{{ rec.description or "N/A" }}</td>
+        <td>{{ rec.event_date.strftime("%Y-%m-%d %H:%M") if rec.event_date else "N/A" }}</td>
+        <td>{{ rec.venue or "N/A" }}</td>
+        <td>{{ rec.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7">No recommendations found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

@@ -1,6 +1,5 @@
-# backend/app.py
 import os
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, session, render_template
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -20,7 +19,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
-# Extended User model remains the same...
+# User model remains unchanged
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -28,19 +27,19 @@ class User(db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     otp_secret = db.Column(db.String(16), nullable=False)
 
-# Extended Recommendation model to include additional fields:
+# Extended Recommendation model
 class Recommendation(db.Model):
     __tablename__ = 'recommendations'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
     category = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.Text)          # New field: event description
-    event_date = db.Column(db.DateTime)         # New field: event start date/time
-    venue = db.Column(db.String(255))           # New field: venue name
+    description = db.Column(db.Text)          # New: event description
+    event_date = db.Column(db.DateTime)         # New: event start date/time
+    venue = db.Column(db.String(255))           # New: venue name
     created_at = db.Column(db.DateTime, server_default=db.func.current_timestamp())
 
 # -------------------------
-# Routes / Endpoints
+# API Routes
 # -------------------------
 
 @app.route("/api/auth/login", methods=["POST"])
@@ -51,7 +50,6 @@ def login():
     otp_code = data.get("otp")
     
     user = User.query.filter_by(username=username).first()
-    
     if user and bcrypt.checkpw(password.encode("utf-8"), user.password_hash.encode("utf-8")):
         totp = pyotp.TOTP(user.otp_secret)
         if totp.verify(otp_code):
@@ -68,14 +66,33 @@ def logout():
 
 @app.route("/api/recommendations", methods=["GET"])
 def get_recommendations():
+    # For testing purposes, this API endpoint requires the user to be logged in.
     if "user_id" not in session:
         return jsonify({"error": "Not logged in."}), 403
 
     recs = Recommendation.query.order_by(Recommendation.created_at.desc()).limit(10).all()
-    recommendations = [{"id": rec.id, "name": rec.name, "category": rec.category} for rec in recs]
+    recommendations = []
+    for rec in recs:
+        recommendations.append({
+            "id": rec.id,
+            "name": rec.name,
+            "category": rec.category,
+            "description": rec.description,
+            "event_date": rec.event_date.isoformat() if rec.event_date else None,
+            "venue": rec.venue,
+            "created_at": rec.created_at.isoformat()
+        })
     return jsonify(recommendations)
 
-# A simple route for testing
+# -------------------------
+# Simple UI Route for Visualization
+# -------------------------
+@app.route("/view-recommendations")
+def view_recommendations():
+    # In this simple UI, we are not enforcing login for demonstration.
+    recs = Recommendation.query.order_by(Recommendation.created_at.desc()).limit(10).all()
+    return render_template("recommendations.html", recommendations=recs)
+
 @app.route('/')
 def index():
     return "Welcome to Las Vegas AI!"

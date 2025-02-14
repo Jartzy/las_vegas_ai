@@ -1,14 +1,17 @@
 // frontend/src/pages/Recommendations.tsx
-
 import { useEffect, useState } from "react";
 import { getRecommendations } from "../api/recommendations";
 import AttractionCard from "../components/AttractionCard";
 import Filters from "../components/Filters";
 
 interface Recommendation {
-    id: string;
+    id: number;
     name: string;
     category: string;
+    description?: string;
+    event_date?: string;
+    venue?: string;
+    created_at?: string;
 }
 
 export default function Recommendations() {
@@ -31,9 +34,10 @@ export default function Recommendations() {
         fetchData();
     }, []);
 
-    const filteredRecommendations: Recommendation[] = selectedCategory === "All" 
-        ? recommendations 
-        : recommendations.filter((rec) => rec.category === selectedCategory);
+    const filteredRecommendations: Recommendation[] =
+        selectedCategory === "All"
+            ? recommendations
+            : recommendations.filter((rec) => rec.category === selectedCategory);
 
     if (loading) return <p>Loading recommendations...</p>;
     if (error) return <p className="text-red-500">{error}</p>;
@@ -44,7 +48,14 @@ export default function Recommendations() {
             <Filters selectedCategory={selectedCategory} onCategoryChange={setSelectedCategory} />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredRecommendations.map((rec) => (
-                    <AttractionCard key={rec.id} name={rec.name} category={rec.category} />
+                    <AttractionCard
+                        key={rec.id}
+                        name={rec.name}
+                        category={rec.category}
+                        description={rec.description}
+                        eventDate={rec.event_date}
+                        venue={rec.venue}
+                    />
                 ))}
             </div>
         </div>
