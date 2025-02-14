@@ -8,3 +8,4 @@ pgdata/
 
 # Ignore environment files (store secrets locally)
 .env
+node_modules

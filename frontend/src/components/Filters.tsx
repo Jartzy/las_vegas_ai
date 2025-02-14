@@ -8,17 +8,4 @@ interface FiltersProps {
 export default function Filters({ selectedCategory, onCategoryChange }: FiltersProps) {
     const categories = ["All", "Food & Drink", "Nightlife", "Outdoor & Adventure", "Events", "Hidden Gems"];
 
-    return (
-        <div className="flex gap-4 mb-4 overflow-x-auto p-2">
-            {categories.map((category) => (
-                <button
-                    key={category}
-                    className={`px-4 py-2 rounded-md border transition duration-300 ${selectedCategory === category ? "bg-blue-500 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
-                    onClick={() => onCategoryChange(category)}
-                >
-                    {category}
-                </button>
-            ))}
-        </div>
-    );
 }
