@@ -1,7 +1,7 @@
 // frontend/src/api/auth.ts
 
 export async function login(username: string, password: string, otp: string) {
-    const response = await fetch("http://localhost:5000/api/auth/login", {
+    const response = await fetch("/api/auth/login", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -11,7 +11,7 @@ export async function login(username: string, password: string, otp: string) {
 }
 
 export async function logout() {
-    const response = await fetch("http://localhost:5000/api/auth/logout", {
+    const response = await fetch("/api/auth/logout", {
         method: "POST",
         credentials: "include"
     });
@@ -19,7 +19,7 @@ export async function logout() {
 }
 
 export async function getRecommendations() {
-    const response = await fetch("http://localhost:5000/api/recommendations", {
+    const response = await fetch("/api/recommendations", {
         method: "GET",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

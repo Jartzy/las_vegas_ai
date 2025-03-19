@@ -25,7 +25,7 @@ export async function getRecommendations(params: RecommendationParams = {}) {
         queryParams.append('user_id', params.userId);
     }
 
-    const url = `http://localhost:5000/api/recommendations?${queryParams.toString()}`;
+    const url = `/api/recommendations?${queryParams.toString()}`;
     
     const response = await fetch(url, {
         method: "GET",
@@ -51,12 +51,13 @@ export async function getRecommendations(params: RecommendationParams = {}) {
         location: item.venue || 'Las Vegas',
         interests: mapInterests(item.category, item.subcategory),
         duration: ['day', 'week', 'local'],
-        source: 'Ticketmaster',
+        // Use the event source from the backend:
+        source: item.source,
         isFree: item.price_range_min === 0
     }));
 }
 
-// Helper functions to map API data to your frontend types
+// Helper functions remain the same
 function mapCategory(category: string): 'Entertainment' | 'Dining' | 'Nightlife' | 'Shopping' | 'Adventure' {
     const categoryMap: { [key: string]: 'Entertainment' | 'Dining' | 'Nightlife' | 'Shopping' | 'Adventure' } = {
         'Music': 'Entertainment',
@@ -95,7 +96,7 @@ function mapInterests(category?: string, subcategory?: string): Interest[] {
 
 // Add interaction tracking
 export async function recordInteraction(eventId: number, interactionType: 'view' | 'like' | 'dislike') {
-    const response = await fetch(`http://localhost:5000/api/events/${eventId}/interact`, {
+    const response = await fetch(`/api/events/${eventId}/interact`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

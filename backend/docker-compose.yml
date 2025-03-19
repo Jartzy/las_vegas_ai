@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:latest
+    container_name: las_vegas_db
+    restart: always
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: las_vegas_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  flask_app:
+    build: .
+    container_name: las_vegas_flask
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - "5001:5000"
+    environment:
+      environment:
+      FLASK_APP: "app.py"
+      FLASK_RUN_HOST: "0.0.0.0"
+      FLASK_RUN_PORT: "5001"
+      FLASK_DEBUG: "1"
+      DATABASE_URL: "postgresql://myuser:mypassword@db/las_vegas_db"
+      TICKETMASTER_API_KEY: "5wpBmmeB6AwOVXq9wpH8KxkzfX1y9Prv"
+    
+    volumes:
+      - ./backend:/app
+    command: ["flask", "run", "--host=0.0.0.0", "--port=5000", "--debug"]
+
+volumes:
+  pgdata:
+    external: true

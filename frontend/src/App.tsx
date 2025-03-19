@@ -1,58 +1,152 @@
 // src/App.tsx
 import React, { useState, useEffect } from 'react';
-import Header from './components/Header';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import EventsDisplay from './components/EventsDisplay';
-import { Event } from './types/event';
-import { fetchEvents } from './services/eventService';
+import EventLanding from './components/EventLanding';
+import { Navbar } from './components/Navbar';
+import Hero from './components/Hero';
+import { Box } from '@mui/material';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const theme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: '#6366f1', // Indigo
+      dark: '#4f46e5',
+      light: '#818cf8',
+      contrastText: '#ffffff',
+    },
+    secondary: {
+      main: '#ec4899', // Pink
+      dark: '#db2777',
+      light: '#f472b6',
+      contrastText: '#ffffff',
+    },
+    background: {
+      default: '#f9fafb',
+      paper: '#ffffff',
+    },
+    text: {
+      primary: '#111827',
+      secondary: '#4b5563',
+    },
+  },
+  typography: {
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    h1: {
+      fontWeight: 700,
+    },
+    h2: {
+      fontWeight: 700,
+    },
+    h3: {
+      fontWeight: 600,
+    },
+    h4: {
+      fontWeight: 600,
+    },
+    h5: {
+      fontWeight: 600,
+    },
+    h6: {
+      fontWeight: 600,
+    },
+    button: {
+      textTransform: 'none',
+      fontWeight: 500,
+    },
+  },
+  shape: {
+    borderRadius: 12,
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          boxShadow: 'none',
+          '&:hover': {
+            boxShadow: 'none',
+          },
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          borderRadius: 12,
+          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+        },
+      },
+    },
+  },
+});
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // Data is fresh for 5 minutes
+      gcTime: 1000 * 60 * 30, // Cache is kept for 30 minutes
+      refetchOnWindowFocus: false, // Don't refetch when window regains focus
+      retry: 1, // Only retry failed requests once
+    },
+  },
+});
+
+const HomePage = ({ userLocation }: { userLocation?: { latitude: number; longitude: number } }) => (
+  <>
+    <Hero />
+    <Box component="main">
+      <EventsDisplay userLocation={userLocation} />
+    </Box>
+  </>
+);
 
 const App: React.FC = () => {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | undefined>();
 
   useEffect(() => {
-    const loadEvents = async () => {
-      try {
-        setLoading(true);
-        const data = await fetchEvents();
-        setEvents(data);
-        setError(null);
-      } catch (err) {
-        setError('Failed to load events. Please try again later.');
-        console.error('Error loading events:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadEvents();
+    // Get user's location if they allow it
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+        }
+      );
+    }
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-700 to-blue-500 text-white">
-      {/* Updated Header with integrated Hero */}
-      <Header />
-
-      <main className="container mx-auto px-4 py-8">
-        {loading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
-            <p className="mt-4 text-lg">Loading events...</p>
-          </div>
-        ) : error ? (
-          <div className="text-center py-8">
-            <p className="text-red-300 text-lg">{error}</p>
-            <button 
-              onClick={() => window.location.reload()} 
-              className="mt-4 bg-white text-blue-900 px-4 py-2 rounded-lg hover:bg-gray-100"
-            >
-              Try Again
-            </button>
-          </div>
-        ) : (
-          <EventsDisplay events={events} />
-        )}
-      </main>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Router>
+          <Box sx={{ minHeight: '100vh' }}>
+            <Navbar />
+            <Routes>
+              <Route path="/" element={<HomePage userLocation={userLocation} />} />
+              <Route path="/events/:eventId" element={<EventLanding />} />
+            </Routes>
+          </Box>
+        </Router>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 };
 

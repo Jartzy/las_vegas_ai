@@ -1,3 +1,228 @@
+Adding Two-Factor Authentication (2FA) for Extra Security
+
+To enhance security, we’ll implement 2FA using Google Authenticator (TOTP - Time-based One-Time Passwords).
+
+1. Install Required Packages
+
+pip install pyotp qrcode[pil]
+
+2. Update users Table to Store 2FA Secret
+
+Modify your PostgreSQL schema to include a column for the 2FA secret key.
+
+ALTER TABLE users ADD COLUMN otp_secret TEXT;
+
+3. Update User Creation (database.py)
+
+Modify user registration to generate a unique 2FA secret.
+
+import pyotp
+import psycopg2
+from flask_bcrypt import Bcrypt
+
+bcrypt = Bcrypt()
+DATABASE_URL = "postgresql://myuser:mypassword@db/las_vegas_db"
+
+def get_db_connection():
+    return psycopg2.connect(DATABASE_URL)
+
+def create_user(username, password):
+    """Creates a new admin user with a 2FA secret key."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
+    otp_secret = pyotp.random_base32()  # Generate 2FA secret key
+    
+    query = "INSERT INTO users (username, password_hash, otp_secret) VALUES (%s, %s, %s) RETURNING otp_secret;"
+    cur.execute(query, (username, password_hash, otp_secret))
+    conn.commit()
+
+    otp_secret_key = cur.fetchone()[0]
+    
+    cur.close()
+    conn.close()
+
+    print("User created successfully!")
+    print("Use this secret in Google Authenticator:", otp_secret_key)
+
+	•	When a new user is created, it will generate a 2FA secret key.
+
+4. Generate QR Code for Google Authenticator (auth.py)
+
+import pyotp
+import qrcode
+from flask import Flask, Blueprint, render_template, request, session, redirect, url_for, flash
+from database import verify_user, get_db_connection
+
+auth_bp = Blueprint("auth", __name__)
+
+def get_otp_secret(username):
+    """Retrieve user's 2FA secret from the database."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    query = "SELECT otp_secret FROM users WHERE username = %s;"
+    cur.execute(query, (username,))
+    otp_secret = cur.fetchone()
+
+    cur.close()
+    conn.close()
+
+    return otp_secret[0] if otp_secret else None
+
+def generate_qr_code(username, otp_secret):
+    """Generates a QR code for Google Authenticator."""
+    otp_uri = pyotp.totp.TOTP(otp_secret).provisioning_uri(
+        name=username, issuer_name="Las Vegas AI Admin"
+    )
+    
+    qr = qrcode.make(otp_uri)
+    qr.save(f"static/qrcodes/{username}.png")
+
+@auth_bp.route("/login", methods=["GET", "POST"])
+def login():
+    """Handles user login with 2FA."""
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+
+        if verify_user(username, password):
+            session["username"] = username
+            return redirect(url_for("auth.otp_verification"))
+        else:
+            flash("Invalid credentials.", "danger")
+
+    return render_template("login.html")
+
+@auth_bp.route("/otp", methods=["GET", "POST"])
+def otp_verification():
+    """Handles 2FA OTP verification."""
+    if "username" not in session:
+        return redirect(url_for("auth.login"))
+
+    username = session["username"]
+    otp_secret = get_otp_secret(username)
+
+    if not otp_secret:
+        flash("2FA Secret not found. Contact admin.", "danger")
+        return redirect(url_for("auth.login"))
+
+    if request.method == "POST":
+        otp_code = request.form["otp"]
+        totp = pyotp.TOTP(otp_secret)
+
+        if totp.verify(otp_code):
+            session["authenticated"] = True
+            flash("Login successful!", "success")
+            return redirect(url_for("dashboard"))
+        else:
+            flash("Invalid OTP code. Try again.", "danger")
+
+    generate_qr_code(username, otp_secret)  # Generate QR Code for new users
+
+    return render_template("otp.html", username=username)
+
+5. Create OTP Verification Template
+
+templates/otp.html
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Two-Factor Authentication</title>
+</head>
+<body>
+    <h2>Enter 2FA Code</h2>
+    <p>Scan this QR code in Google Authenticator if you haven't already:</p>
+    <img src="{{ url_for('static', filename='qrcodes/' + username + '.png') }}" alt="QR Code">
+    
+    <form method="POST">
+        <label>Authentication Code:</label>
+        <input type="text" name="otp" required>
+        <button type="submit">Verify</button>
+    </form>
+</body>
+</html>
+
+6. Modify dashboard.html to Show Logout Option
+
+Modify dashboard.html to only allow authenticated users.
+
+{% if session['authenticated'] %}
+    <p><a href="{{ url_for('auth.logout') }}">Logout</a></p>
+{% endif %}
+
+7. Update main.py to Require 2FA for Dashboard
+
+from flask import Flask, render_template, session, redirect, url_for
+from database import get_db_connection
+from auth import auth_bp
+
+app = Flask(__name__)
+app.secret_key = "your_secret_key"  
+app.register_blueprint(auth_bp)
+
+def is_logged_in():
+    return session.get("authenticated", False)
+
+@app.route("/")
+def dashboard():
+    if not is_logged_in():
+        return redirect(url_for("auth.login"))
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    cur.execute("SELECT timestamp, level, source, message FROM logs ORDER BY timestamp DESC LIMIT 50;")
+    logs = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template("dashboard.html", logs=logs)
+
+8. Updating Docker
+
+Modify Dockerfile to include the new dependencies:
+
+RUN pip install --no-cache-dir flask flask-login flask-bcrypt psycopg2 pyotp qrcode[pil]
+
+Rebuild the Docker image:
+
+docker-compose up --build -d
+
+9. Testing
+
+1️⃣ Register a New Admin
+
+from database import create_user
+
+username = input("Enter username: ")
+password = input("Enter password: ")
+
+create_user(username, password)
+
+	•	This will generate a unique 2FA secret.
+
+2️⃣ Login to Dashboard
+	1.	Go to http://localhost:5000/login
+	2.	Enter username & password.
+	3.	Enter the 6-digit OTP code from Google Authenticator.
+
+10. Summary of Security Features
+
+✅ Admin authentication (Username & Password)
+✅ Password hashing (bcrypt)
+✅ Two-Factor Authentication (TOTP-based)
+✅ Session-based login management
+✅ QR code for easy Google Authenticator setup
+
+Next Steps
+
+Would you like role-based access control (RBAC) so different users have different permissions (e.g., Viewer vs. Admin)?
+
 Project Overview: AI-Powered Las Vegas Recommendation & Logging System
 
 📌 Project Summary

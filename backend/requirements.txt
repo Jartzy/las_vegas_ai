@@ -10,3 +10,4 @@ tenacity>=8.2.3
 requests>=2.31.0
 SQLAlchemy>=1.4.47
 alembic>=1.13.1
+tenacity>=9.0.0

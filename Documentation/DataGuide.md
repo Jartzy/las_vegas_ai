@@ -311,4 +311,4 @@ Summary
 	•	Shortcuts:
 See the “Shortcuts and Common Commands” section for frequently used commands.
 
-This guide should serve as a detailed roadmap for setting up and managing your environment, both locally and in Docker. If you have any more questions or need further clarification on any step, feel free to ask!
+This guide should serve as a detailed roadmap for setting up and managing your environment, both locally and in Docker. If you have any more questions or need further clarification on any step, feel free to

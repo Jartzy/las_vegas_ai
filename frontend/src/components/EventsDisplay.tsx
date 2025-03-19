@@ -1,238 +1,306 @@
 // src/components/EventsDisplay.tsx
-import React, { useState, useEffect } from 'react';
-import { Event, EventFilters as FiltersInterface } from '../types/event';
-import { Filter } from 'lucide-react';
-import SkeletonCard from './SkeletonCard';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  Container,
+  Grid,
+  Card,
+  CardContent,
+  Typography,
+  CardMedia,
+  Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  SelectChangeEvent,
+  CircularProgress,
+  Alert,
+  Chip,
+  Paper,
+  Rating,
+  Divider,
+} from '@mui/material';
+import { Event, EventFilters } from '../types/event';
+import { useEvents } from '../services/eventService';
+import { formatDate } from '../utils/dateUtils';
+import AttractionsIcon from '@mui/icons-material/Attractions';
+import LocalActivityIcon from '@mui/icons-material/LocalActivity';
 
 interface EventsDisplayProps {
-  events: Event[];
+  userLocation?: { latitude: number; longitude: number };
 }
 
-type PriceRange = 'all' | 'free' | 'under-50' | '50-100' | '100-200' | 'over-200';
-type Timeframe = 'all' | 'today' | 'week' | 'month';
-type Category = 'all' | 'music' | 'sports' | 'comedy' | 'theatre';
+const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1581351721010-8cf859cb14a4?q=80&w=1200&auto=format&fit=crop';
 
-const EventsDisplay: React.FC<EventsDisplayProps> = ({ events }) => {
-  const [filters, setFilters] = useState<FiltersInterface>({
+const EventsDisplay: React.FC<EventsDisplayProps> = ({ userLocation }) => {
+  const [filters, setFilters] = useState<EventFilters>({
     category: 'all',
     priceRange: 'all',
-    timeframe: 'all'
+    timeframe: 'all',
+    sortBy: 'date',
+    location: userLocation,
+    rating: 0,
   });
-  const [filteredEvents, setFilteredEvents] = useState<Event[]>(events);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Simulate loading state
-  useEffect(() => {
-    // Simulate a delay (e.g., fetching data)
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [events]);
+  const { data: events, isLoading, isError, error } = useEvents(filters);
 
-  useEffect(() => {
-    let newFilteredEvents = events;
-
-    if (filters.category !== 'all') {
-      newFilteredEvents = newFilteredEvents.filter(
-        event => event.category === filters.category
-      );
-    }
-
-    if (filters.priceRange !== 'all') {
-      switch (filters.priceRange) {
-        case 'free':
-          newFilteredEvents = newFilteredEvents.filter(
-            event => event.price_range_min === 0 || event.price_range_max === 0
-          );
-          break;
-        case 'under-50':
-          newFilteredEvents = newFilteredEvents.filter(
-            event =>
-              event.price_range_min !== null &&
-              event.price_range_min > 0 &&
-              event.price_range_min < 50
-          );
-          break;
-        case '50-100':
-          newFilteredEvents = newFilteredEvents.filter(
-            event =>
-              event.price_range_min !== null &&
-              event.price_range_min >= 50 &&
-              event.price_range_min <= 100
-          );
-          break;
-        case '100-200':
-          newFilteredEvents = newFilteredEvents.filter(
-            event =>
-              event.price_range_min !== null &&
-              event.price_range_min > 100 &&
-              event.price_range_min <= 200
-          );
-          break;
-        case 'over-200':
-          newFilteredEvents = newFilteredEvents.filter(
-            event =>
-              event.price_range_min !== null &&
-              event.price_range_min > 200
-          );
-          break;
-      }
-    }
-
-    if (filters.timeframe !== 'all') {
-      const now = new Date();
-      if (filters.timeframe === 'today') {
-        newFilteredEvents = newFilteredEvents.filter(event => {
-          if (event.start_date) {
-            const eventDate = new Date(event.start_date);
-            return eventDate.toDateString() === now.toDateString();
-          }
-          return false;
-        });
-      } else if (filters.timeframe === 'week') {
-        const weekFromNow = new Date();
-        weekFromNow.setDate(now.getDate() + 7);
-        newFilteredEvents = newFilteredEvents.filter(event => {
-          if (event.start_date) {
-            const eventDate = new Date(event.start_date);
-            return eventDate >= now && eventDate <= weekFromNow;
-          }
-          return false;
-        });
-      }
-    }
-
-    setFilteredEvents(newFilteredEvents);
-  }, [filters, events]);
-
-  const formatPrice = (min: number | null, max: number | null) => {
-    if (min === null && max === null) return 'Price not available';
-    if (min === 0 && max === 0) return 'Free';
-    if (min === null) return `Up to $${max?.toLocaleString()}`;
-    if (max === null) return `From $${min.toLocaleString()}`;
-    if (min === max) return `$${min.toLocaleString()}`;
-    return `$${min.toLocaleString()} - $${max.toLocaleString()}`;
+  const handleFilterChange = (event: SelectChangeEvent<string>) => {
+    const { name, value } = event.target;
+    setFilters((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Filter Bar */}
-      <div className="bg-white/5 backdrop-blur-lg rounded-xl p-4 mb-8 shadow-lg flex items-center space-x-4">
-        <div className="flex items-center text-purple-400">
-          <Filter className="w-5 h-5" />
-        </div>
-        <div className="flex-grow grid grid-cols-3 gap-4">
-          <select 
-            className="w-full bg-white/10 text-white p-2 rounded-lg border border-white/20"
-            value={filters.category}
-            onChange={(e) => setFilters(prev => ({ 
-              ...prev, 
-              category: e.target.value as Category 
-            }))}
-          >
-            <option value="all">All Categories</option>
-            <option value="music">Music</option>
-            <option value="sports">Sports</option>
-            <option value="comedy">Comedy</option>
-            <option value="theatre">Theatre</option>
-          </select>
-          <select 
-            className="w-full bg-white/10 text-white p-2 rounded-lg border border-white/20"
-            value={filters.priceRange}
-            onChange={(e) => setFilters(prev => ({ 
-              ...prev, 
-              priceRange: e.target.value as PriceRange 
-            }))}
-          >
-            <option value="all">All Prices</option>
-            <option value="free">Free Events</option>
-            <option value="under-50">Under $50</option>
-            <option value="50-100">$50 - $100</option>
-            <option value="100-200">$100 - $200</option>
-            <option value="over-200">$200+</option>
-          </select>
-          <select 
-            className="w-full bg-white/10 text-white p-2 rounded-lg border border-white/20"
-            value={filters.timeframe}
-            onChange={(e) => setFilters(prev => ({ 
-              ...prev, 
-              timeframe: e.target.value as Timeframe 
-            }))}
-          >
-            <option value="all">Any Time</option>
-            <option value="today">Today</option>
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-          </select>
-        </div>
-      </div>
+  const renderPriceTag = (min: number, max: number) => {
+    const priceLevel = min < 50 ? '$' : min < 100 ? '$$' : min < 200 ? '$$$' : '$$$$';
+    return (
+      <Chip
+        label={priceLevel}
+        size="small"
+        sx={{
+          backgroundColor: 'primary.main',
+          color: 'white',
+          fontWeight: 'bold',
+        }}
+      />
+    );
+  };
 
-      {/* Events Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {isLoading ? (
-          // Render 6 skeletons during loading
-          Array.from({ length: 6 }).map((_, idx) => (
-            <SkeletonCard key={idx} />
-          ))
-        ) : (
-          filteredEvents.map(event => (
-            <div 
-              key={event.id} 
-              className="group overflow-hidden bg-white/5 backdrop-blur-lg border border-white/10 text-white rounded-lg
-                        transition-all duration-300 hover:bg-white/10 hover:scale-102 hover:shadow-xl"
-            >
-              <div className="relative">
-                {event.image_url && (
-                  <div className="relative h-48 w-full overflow-hidden">
-                    <img 
-                      src={event.image_url} 
-                      alt={event.name}
-                      className="absolute inset-0 w-full h-full object-cover
-                                transition-transform duration-300 group-hover:scale-110"
-                    />
-                    {/* Price Badge */}
-                    <div className="absolute top-4 right-4 bg-black/70 backdrop-blur-sm px-3 py-1 rounded-full
-                                  text-sm font-semibold text-white">
-                      {event.price_range_min === 0 ? 'FREE' : 
-                       `From $${event.price_range_min?.toLocaleString()}`}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="p-4">
-                <h3 className="text-xl font-bold mb-1 group-hover:text-purple-300 transition-colors">
-                  {event.name}
-                </h3>
-                <p className="text-gray-300 text-sm mb-3">
-                  {event.venue || 'Venue TBA'}
-                </p>
-                <div className="space-y-2">
-                  {event.start_date && (
-                    <p className="text-sm">
-                      {new Date(event.start_date).toLocaleDateString(undefined, {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </p>
-                  )}
-                  <p className="text-sm font-medium">
-                    {formatPrice(event.price_range_min, event.price_range_max)}
-                  </p>
-                  {event.description && (
-                    <p className="text-sm text-gray-300 line-clamp-2">
-                      {event.description}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
+  const renderEventCard = (event: Event) => (
+    <Link 
+      to={`/events/${event.id}`} 
+      style={{ textDecoration: 'none', display: 'block', height: '100%' }}
+    >
+      <Card
+        sx={{
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          transition: 'transform 0.2s',
+          '&:hover': {
+            transform: 'translateY(-4px)',
+            boxShadow: 6,
+          },
+        }}
+      >
+        <CardMedia
+          component="img"
+          height="200"
+          image={event.image_url || DEFAULT_IMAGE}
+          alt={event.name}
+          sx={{ 
+            objectFit: 'cover',
+            backgroundColor: 'grey.100' 
+          }}
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = DEFAULT_IMAGE;
+          }}
+        />
+        <CardContent sx={{ flexGrow: 1, p: 2 }}>
+          <Box sx={{ mb: 2 }}>
+            <Typography gutterBottom variant="h6" component="h2" sx={{ fontWeight: 'bold' }}>
+              {event.name}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+              {renderPriceTag(event.price_range_min, event.price_range_max)}
+              <Chip
+                label={event.category}
+                size="small"
+                sx={{ backgroundColor: 'secondary.light' }}
+              />
+              {event.tags?.map((tag) => (
+                <Chip 
+                  key={`${event.id}-${tag}`} 
+                  label={tag} 
+                  size="small" 
+                  variant="outlined" 
+                />
+              ))}
+            </Box>
+          </Box>
+          <Typography 
+            variant="body2" 
+            color="text.secondary" 
+            sx={{ 
+              mb: 2,
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}
+          >
+            {event.description}
+          </Typography>
+          <Box sx={{ mt: 'auto' }}>
+            <Typography variant="body2" color="text.primary" sx={{ mb: 1 }}>
+              {formatDate(event.start_date)}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              {event.address}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Rating value={event.rating} precision={0.5} size="small" readOnly />
+              <Typography variant="body2" color="text.secondary">
+                ({event.review_count})
+              </Typography>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+
+  if (isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Container>
+        <Alert severity="error">
+          Error loading events: {error instanceof Error ? error.message : 'Unknown error'}
+        </Alert>
+      </Container>
+    );
+  }
+
+  const aiCuratedExperiences = events?.filter((event) => event.rating >= 4.5);
+  const popularAttractions = events?.filter((event) => event.review_count > 1000);
+
+  return (
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Paper sx={{ p: 3, mb: 4 }} elevation={0}>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth>
+              <InputLabel>Duration</InputLabel>
+              <Select
+                name="timeframe"
+                value={filters.timeframe}
+                label="Duration"
+                onChange={handleFilterChange}
+              >
+                <MenuItem value="all">Any Duration</MenuItem>
+                <MenuItem value="today">Just for a Day</MenuItem>
+                <MenuItem value="this-week">Visiting for a Week</MenuItem>
+                <MenuItem value="this-month">I'm a Local</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth>
+              <InputLabel>Category</InputLabel>
+              <Select
+                name="category"
+                value={filters.category}
+                label="Category"
+                onChange={handleFilterChange}
+              >
+                <MenuItem value="all">All Categories</MenuItem>
+                <MenuItem value="shows">Shows</MenuItem>
+                <MenuItem value="concerts">Concerts</MenuItem>
+                <MenuItem value="sports">Sports</MenuItem>
+                <MenuItem value="comedy">Comedy</MenuItem>
+                <MenuItem value="cirque">Cirque du Soleil</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth>
+              <InputLabel>Price Range</InputLabel>
+              <Select
+                name="priceRange"
+                value={filters.priceRange}
+                label="Price Range"
+                onChange={handleFilterChange}
+              >
+                <MenuItem value="all">All Prices</MenuItem>
+                <MenuItem value="under-50">Under $50</MenuItem>
+                <MenuItem value="50-100">$50 - $100</MenuItem>
+                <MenuItem value="100-200">$100 - $200</MenuItem>
+                <MenuItem value="over-200">Over $200</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={3}>
+            <FormControl fullWidth>
+              <InputLabel>Sort By</InputLabel>
+              <Select
+                name="sortBy"
+                value={filters.sortBy}
+                label="Sort By"
+                onChange={handleFilterChange}
+              >
+                <MenuItem value="date">Date</MenuItem>
+                <MenuItem value="price-low">Price: Low to High</MenuItem>
+                <MenuItem value="price-high">Price: High to Low</MenuItem>
+                <MenuItem value="rating">Rating</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+      </Paper>
+
+      <Box sx={{ mb: 6 }} id="experiences">
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+          <AttractionsIcon sx={{ mr: 1, color: 'primary.main' }} />
+          <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold' }}>
+            AI-Curated Experiences
+          </Typography>
+        </Box>
+        <Grid container spacing={3}>
+          {aiCuratedExperiences?.slice(0, 6).map((event) => (
+            <Grid item key={event.id} xs={12} sm={6} md={4}>
+              {renderEventCard(event)}
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+
+      <Divider sx={{ my: 6 }} />
+
+      <Box sx={{ mb: 6 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+          <LocalActivityIcon sx={{ mr: 1, color: 'primary.main' }} />
+          <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold' }}>
+            Popular Attractions
+          </Typography>
+        </Box>
+        <Grid container spacing={3}>
+          {popularAttractions?.slice(0, 9).map((event) => (
+            <Grid item key={event.id} xs={12} sm={6} md={4}>
+              {renderEventCard(event)}
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+
+      <Divider sx={{ my: 6 }} />
+
+      <Box sx={{ mb: 6 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+          <LocalActivityIcon sx={{ mr: 1, color: 'primary.main' }} />
+          <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold' }}>
+            All Events
+          </Typography>
+        </Box>
+        <Grid container spacing={3}>
+          {events?.map((event) => (
+            <Grid item key={event.id} xs={12} sm={6} md={4}>
+              {renderEventCard(event)}
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
+    </Container>
   );
 };
 

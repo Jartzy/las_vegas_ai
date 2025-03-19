@@ -9,16 +9,20 @@ interface EventCalendarProps {
 const EventCalendar: React.FC<EventCalendarProps> = ({ events }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
+  // Determine the start and end dates for the current month.
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
+  // Group events by day
   const eventsByDay = useMemo(() => {
     const eventMap: { [key: string]: Event[] } = {};
-    
+
     events.forEach(event => {
       if (event.start_date) {
+        // Parse ISO string to a Date object
         const eventDate = parseISO(event.start_date);
+        // Use toDateString() as the key (e.g., "Mon Feb 14 2025")
         const dateKey = eventDate.toDateString();
         
         if (!eventMap[dateKey]) {
@@ -31,15 +35,19 @@ const EventCalendar: React.FC<EventCalendarProps> = ({ events }) => {
     return eventMap;
   }, [events]);
 
+  // Render the calendar grid
   const renderCalendar = () => {
     return (
       <div className="grid grid-cols-7 gap-2">
+        {/* Render days of the week headers */}
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-          <div key={day} className="text-center font-bold text-gray-600">{day}</div>
+          <div key={day} className="text-center font-bold text-gray-600">
+            {day}
+          </div>
         ))}
+        {/* Render each day cell */}
         {daysInMonth.map(day => {
           const eventsOnDay = eventsByDay[day.toDateString()] || [];
-          
           return (
             <div 
               key={day.toString()} 
